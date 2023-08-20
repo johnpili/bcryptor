@@ -1,0 +1,65 @@
+{{define "title"}}{{.Title}}{{end}}
+{{define "content"}}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <form action="{{.UIMapData.basePath}}/" method="post" autocomplete="off">
+                <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-12">
+                            <h3>Generate Hash</h3>
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="basic-addon1">Plaintext</span>
+                                </div>
+                                <input autocomplete="off" type="text" class="form-control" name="plaintext" placeholder="Plaintext" aria-label="Plaintext" aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 pt-4">
+                            <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                            <button type="reset" class="btn btn-secondary btn-sm">Reset</button>
+                        </div>
+                    </div>                    
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 mt-5">
+            <form action="{{.UIMapData.basePath}}/check" method="post" autocomplete="off">
+                <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-12">
+                            <h3>Check Hash</h3>
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="basic-addon2">Bcrypt Hash</span>
+                                </div>
+                                <input type="text" class="form-control" name="bcryptHash" placeholder="Bcrypt Hash" aria-label="bcryptHash" aria-describedby="basic-addon2">
+                            </div>
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="basic-addon3">Plaintext</span>
+                                </div>
+                                <input type="text" class="form-control" name="plaintext" placeholder="Plaintext" aria-label="Plaintext" aria-describedby="basic-addon3">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 pt-4">
+                            <button type="submit" class="btn btn-primary btn-sm">Check</button>
+                            <button type="reset" class="btn btn-secondary btn-sm">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}
+{{define "scripts"}}
+{{end}}
