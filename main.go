@@ -27,7 +27,10 @@ var (
 	views embed.FS
 )
 
-const MAXLENGTH = 32
+const (
+	MaxlengthPlaintext  = 32
+	MaxBcryptHashLength = 72
+)
 
 func main() {
 	pid := os.Getpid()
@@ -77,8 +80,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		{
 			plaintext := strings.Trim(r.FormValue("plaintext"), " ")
-			if len(plaintext) > MAXLENGTH {
-				plaintext = plaintext[0:MAXLENGTH]
+			if len(plaintext) > MaxlengthPlaintext {
+				plaintext = plaintext[0:MaxlengthPlaintext]
 			}
 
 			hashedPlaintext, err := bcryptPlaintext(plaintext)
@@ -109,8 +112,12 @@ func checkHashHandler(w http.ResponseWriter, r *http.Request) {
 		{
 			bcryptHash := strings.Trim(r.FormValue("bcryptHash"), " ")
 			plaintext := strings.Trim(r.FormValue("plaintext"), " ")
-			if len(plaintext) > MAXLENGTH {
-				plaintext = plaintext[0:MAXLENGTH]
+			if len(plaintext) > MaxlengthPlaintext {
+				plaintext = plaintext[0:MaxlengthPlaintext]
+			}
+
+			if len(bcryptHash) > MaxBcryptHashLength {
+				bcryptHash = bcryptHash[0:MaxBcryptHashLength]
 			}
 
 			match := checkBcryptHash(bcryptHash, plaintext)
