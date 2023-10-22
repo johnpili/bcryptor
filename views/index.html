@@ -1,9 +1,9 @@
 {{define "title"}}{{.Title}}{{end}}
 {{define "content"}}
-<div class="container-fluid">
+<div id="app" class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <form action="{{.UIMapData.basePath}}/" method="post" autocomplete="off">
+            <form autocomplete="off">
                 <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
                 <div class="container">
                     <div class="row">
@@ -13,13 +13,24 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text" id="basic-addon1">Plaintext</span>
                                 </div>
-                                <input autocomplete="off" type="text" class="form-control" name="plaintext" placeholder="Plaintext" aria-label="Plaintext" aria-describedby="basic-addon1">
+                                <input autocomplete="off" v-model="bcryptPlaintext" type="text" class="form-control" placeholder="Plaintext" aria-label="Plaintext" aria-describedby="basic-addon1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text" id="bcryptHashedTextAddOn">Generated Hash</span>
+                                </div>
+                                <input type="text" id="bcryptHashedText" disabled="disabled" :value="bcryptHashedText" class="form-control" aria-describedby="bcryptHashedTextAddOn">
+                                <button class="btn btn-secondary btn-sm" type="button" @click="copyHashedText"><i class="bi bi-copy"></i></button>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-12 pt-4">
-                            <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                            <button type="button" class="btn btn-primary btn-sm" @click="hash">Generate</button>
                             <button type="reset" class="btn btn-secondary btn-sm">Reset</button>
                         </div>
                     </div>                    
@@ -29,7 +40,7 @@
     </div>
     <div class="row">
         <div class="col-12 mt-5">
-            <form action="{{.UIMapData.basePath}}/check" method="post" autocomplete="off">
+            <form autocomplete="off">
                 <input type="hidden" name="gorilla.csrf.Token" value="{{.CSRFToken}}">
                 <div class="container">
                     <div class="row">
@@ -39,19 +50,27 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text" id="basic-addon2">Bcrypt Hash</span>
                                 </div>
-                                <input type="text" class="form-control" name="bcryptHash" placeholder="Bcrypt Hash" aria-label="bcryptHash" aria-describedby="basic-addon2">
+                                <input type="text" class="form-control" v-model="checkHashedText" placeholder="Bcrypt Hash" aria-label="bcryptHash" aria-describedby="basic-addon2">
                             </div>
                             <div class="input-group mb-3">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text" id="basic-addon3">Plaintext</span>
                                 </div>
-                                <input type="text" class="form-control" name="plaintext" placeholder="Plaintext" aria-label="Plaintext" aria-describedby="basic-addon3">
+                                <input type="text" class="form-control" v-model="checkPlaintext"  placeholder="Plaintext" aria-label="Plaintext" aria-describedby="basic-addon3">
+                                <div class="input-group-append">
+                                    <template v-if="checkResultCode == 1">
+                                        <label class="input-group-text text-white bg-success" for="basic-addon3">Valid</label>
+                                    </template>
+                                    <template v-if="checkResultCode == 0">
+                                        <label class="input-group-text text-white bg-danger" for="basic-addon3">Invalid</label>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-12 pt-4">
-                            <button type="submit" class="btn btn-primary btn-sm">Check</button>
+                            <button type="button" class="btn btn-primary btn-sm" @click="check">Check</button>
                             <button type="reset" class="btn btn-secondary btn-sm">Reset</button>
                         </div>
                     </div>
@@ -62,4 +81,86 @@
 </div>
 {{end}}
 {{define "scripts"}}
+<script type="module">
+    const {createApp} = Vue;
+
+    const App = {
+        data() {
+            return {
+                errorMessage: "",
+                bcryptPlaintext: "",
+                bcryptHashedText: "",
+
+                checkHashedText: "",
+                checkPlaintext: "",
+                checkResultCode: -1,
+            }
+        },
+        watch: {
+            bcryptPlaintext: function (oldValue, newValue) {
+                this.bcryptHashedText = "";
+            },
+            checkHashedText: function (oldValue, newValue) {
+                this.checkResultCode = -1;
+            },
+            checkPlaintext: function (oldValue, newValue) {
+                this.checkResultCode = -1;
+            },
+        },
+        methods: {
+            hash() {
+                if(typeof this.bcryptPlaintext === "string" && this.bcryptPlaintext.length === 0){
+                    return;
+                }
+
+                const config = {};
+                config.headers = {};
+                config.headers['X-CSRF-Token'] = document.querySelector('meta[name="_csrf"]').content;
+                config.headers['Content-Type'] = 'application/json';
+                axios.post('/hash', {
+                    plaintext: this.bcryptPlaintext
+                }, config).then((r) => {
+                    this.bcryptHashedText = r.data;
+                }).catch((e) => {
+                    console.error(e);
+                });
+            },
+            check() {
+                if(typeof this.checkHashedText === "string" && this.checkHashedText.length === 0){
+                    return;
+                }
+
+                if(typeof this.checkPlaintext === "string" && this.checkPlaintext.length === 0){
+                    return;
+                }
+
+                const config = {};
+                config.headers = {};
+                config.headers['X-CSRF-Token'] = document.querySelector('meta[name="_csrf"]').content;
+                config.headers['Content-Type'] = 'application/json';
+                axios.post('/check', {
+                    checkHashedText: this.checkHashedText,
+                    checkPlaintext: this.checkPlaintext
+                }, config).then((r) => {
+                    if(r.data) {
+                        this.checkResultCode = 1;
+                    } else {
+                        this.checkResultCode = 0;
+                    }
+                }).catch((e) => {
+                    this.checkResultCode = -1;
+                    console.error(e);
+                });
+            },
+            copyHashedText() {
+                let t = document.getElementById("bcryptHashedText");
+                t.select();
+                navigator.clipboard.writeText(t.value);
+            }
+        }
+    };
+
+    const app = createApp(App);
+    app.mount("#app");
+</script>
 {{end}}

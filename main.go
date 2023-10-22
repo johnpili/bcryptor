@@ -4,6 +4,7 @@ import (
 	"bcryptor/models"
 	"bcryptor/page"
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/csrf"
@@ -11,12 +12,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v2"
 	"html/template"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -25,11 +26,6 @@ var (
 
 	//go:embed views/*
 	views embed.FS
-)
-
-const (
-	MaxlengthPlaintext  = 32
-	MaxBcryptHashLength = 72
 )
 
 func main() {
@@ -46,9 +42,39 @@ func main() {
 	loadConfiguration(configLocation, &configuration)
 
 	router := httprouter.New()
-	router.HandlerFunc("GET", fmt.Sprintf("%s%s", configuration.HTTP.BasePath, "/"), indexHandler)
-	router.HandlerFunc("POST", fmt.Sprintf("%s%s", configuration.HTTP.BasePath, "/"), indexHandler)
-	router.HandlerFunc("POST", fmt.Sprintf("%s%s", configuration.HTTP.BasePath, "/check"), checkHashHandler)
+	router.HandlerFunc(http.MethodGet, fmt.Sprintf("%s%s", configuration.HTTP.BasePath, "/"), indexHandler)
+	router.HandlerFunc(http.MethodPost, fmt.Sprintf("%s%s", configuration.HTTP.BasePath, "/check"), func(w http.ResponseWriter, r *http.Request) {
+		var checkDto models.CheckModel
+		buffer, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 200))
+		defer r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(buffer, &checkDto)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		isMatch := checkBcryptHash(checkDto.CheckHashedText, checkDto.CheckPlaintext)
+		w.Header().Add("Content-Type", "application/json")
+		_, _ = w.Write([]byte(strconv.FormatBool(isMatch)))
+	})
+	router.HandlerFunc(http.MethodPost, fmt.Sprintf("%s%s", configuration.HTTP.BasePath, "/hash"), func(w http.ResponseWriter, r *http.Request) {
+		var hashDto models.HashModel
+		buffer, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 200))
+		defer r.Body.Close()
+		if err != nil {
+			panic(err)
+		}
+		err = json.Unmarshal(buffer, &hashDto)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		hashedValue, _ := bcryptPlaintext(hashDto.Plaintext)
+		w.Header().Add("Content-Type", "application/json")
+		_, _ = w.Write([]byte(hashedValue))
+	})
 
 	csrfProtection := csrf.Protect(generateRandomBytes(32))
 	port := strconv.Itoa(configuration.HTTP.Port)
@@ -69,77 +95,10 @@ func main() {
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		{
-			p := page.New()
-			p.Title = "Bcryptor"
-			p.CSRFToken = csrf.Token(r)
-			renderPage(w, r, p, configuration.HTTP.BasePath, "views/base.html", "views/index.html")
-		}
-	case http.MethodPost:
-		{
-			plaintext := strings.Trim(r.FormValue("plaintext"), " ")
-			if len(plaintext) > MaxlengthPlaintext {
-				plaintext = plaintext[0:MaxlengthPlaintext]
-			}
-
-			hashedPlaintext, err := bcryptPlaintext(plaintext)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-
-			p := page.New()
-			p.Title = "Bcryptor"
-			p.CSRFToken = csrf.Token(r)
-
-			data := make(map[string]interface{})
-			data["hashedPlaintext"] = hashedPlaintext
-
-			p.SetData(data)
-			renderPage(w, r, p, configuration.HTTP.BasePath, "views/base.html", "views/hashed-plaintext.html")
-		}
-	default:
-		{
-		}
-	}
-}
-
-func checkHashHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		{
-			bcryptHash := strings.Trim(r.FormValue("bcryptHash"), " ")
-			plaintext := strings.Trim(r.FormValue("plaintext"), " ")
-			if len(plaintext) > MaxlengthPlaintext {
-				plaintext = plaintext[0:MaxlengthPlaintext]
-			}
-
-			if len(bcryptHash) > MaxBcryptHashLength {
-				bcryptHash = bcryptHash[0:MaxBcryptHashLength]
-			}
-
-			match := checkBcryptHash(bcryptHash, plaintext)
-
-			p := page.New()
-			p.Title = "Bcryptor"
-			p.CSRFToken = csrf.Token(r)
-
-			data := make(map[string]interface{})
-			if match {
-				data["result"] = "Match"
-			} else {
-				data["result"] = "Not Match"
-			}
-
-			p.SetData(data)
-			renderPage(w, r, p, configuration.HTTP.BasePath, "views/base.html", "views/check-bcrypt-hash.html")
-		}
-	default:
-		{
-		}
-	}
+	p := page.New()
+	p.Title = "Bcryptor"
+	p.CSRFToken = csrf.Token(r)
+	renderPage(w, r, p, configuration.HTTP.BasePath, "views/base.html", "views/index.html")
 }
 
 func bcryptPlaintext(plaintext string) (string, error) {
