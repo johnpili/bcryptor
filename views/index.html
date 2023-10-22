@@ -24,14 +24,14 @@
                                     <span class="input-group-text" id="bcryptHashedTextAddOn">Generated Hash</span>
                                 </div>
                                 <input type="text" id="bcryptHashedText" disabled="disabled" :value="bcryptHashedText" class="form-control" aria-describedby="bcryptHashedTextAddOn">
-                                <button class="btn btn-secondary btn-sm" type="button" @click="copyHashedText"><i class="bi bi-copy"></i></button>
+                                <button class="btn btn-sm btn-secondary" type="button" @click="copyHashedText"><i class="bi bi-copy"></i></button>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-12 pt-4">
-                            <button type="button" class="btn btn-primary btn-sm" @click="hash">Generate</button>
-                            <button type="reset" class="btn btn-secondary btn-sm">Reset</button>
+                            <button type="button" class="btn btn-sm btn-primary" @click="hash">Generate</button>
+                            <button type="reset" class="btn btn-sm btn-secondary">Reset</button>
                         </div>
                     </div>                    
                 </div>
@@ -70,8 +70,8 @@
                     </div>
                     <div class="row">
                         <div class="col-12 pt-4">
-                            <button type="button" class="btn btn-primary btn-sm" @click="check">Check</button>
-                            <button type="reset" class="btn btn-secondary btn-sm">Reset</button>
+                            <button type="button" class="btn btn-sm btn-primary" @click="check">Check</button>
+                            <button type="reset" class="btn btn-sm btn-secondary">Reset</button>
                         </div>
                     </div>
                 </div>
@@ -117,7 +117,7 @@
                 config.headers = {};
                 config.headers['X-CSRF-Token'] = document.querySelector('meta[name="_csrf"]').content;
                 config.headers['Content-Type'] = 'application/json';
-                axios.post('/hash', {
+                axios.post('{{.UIMapData.basePath}}/hash', {
                     plaintext: this.bcryptPlaintext
                 }, config).then((r) => {
                     this.bcryptHashedText = r.data;
@@ -138,7 +138,7 @@
                 config.headers = {};
                 config.headers['X-CSRF-Token'] = document.querySelector('meta[name="_csrf"]').content;
                 config.headers['Content-Type'] = 'application/json';
-                axios.post('/check', {
+                axios.post('{{.UIMapData.basePath}}/check', {
                     checkHashedText: this.checkHashedText,
                     checkPlaintext: this.checkPlaintext
                 }, config).then((r) => {
